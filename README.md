@@ -179,8 +179,8 @@ jupyter notebook notebooks/supply_chain_eda.ipynb
 ## 👤 Author
 
 **Vaibhavi Panasa**
-- [LinkedIn](https://www.linkedin.com/in/vaibhavipanasa)
-- [GitHub](https://github.com/YOUR_USERNAME)
+- [LinkedIn](www.linkedin.com/in/vaibhavi-panasa)
+- [GitHub](https://github.com/vaibhavipanasa)
 - 📧 vaibhavipanasa@gmail.com
 
 ---
