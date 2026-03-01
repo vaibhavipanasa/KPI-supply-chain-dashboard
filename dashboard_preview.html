@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supply Chain KPI Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-card: #111827;
+    --bg-card-hover: #1a2236;
+    --border: #1e293b;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-blue: #3b82f6;
+    --accent-green: #10b981;
+    --accent-red: #ef4444;
+    --accent-amber: #f59e0b;
+    --accent-purple: #8b5cf6;
+    --accent-cyan: #06b6d4;
+    --glow-blue: rgba(59, 130, 246, 0.15);
+    --glow-green: rgba(16, 185, 129, 0.15);
+    --glow-red: rgba(239, 68, 68, 0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .dashboard {
+    position: relative;
+    z-index: 1;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .header .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .date-badge {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  }
+
+  /* KPI Cards Row */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .kpi-card:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(59,130,246,0.3);
+    transform: translateY(-2px);
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+  .kpi-card:nth-child(1)::before { background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)); }
+  .kpi-card:nth-child(2)::before { background: linear-gradient(90deg, var(--accent-green), #34d399); }
+  .kpi-card:nth-child(3)::before { background: linear-gradient(90deg, var(--accent-red), #f87171); }
+  .kpi-card:nth-child(4)::before { background: linear-gradient(90deg, var(--accent-purple), #a78bfa); }
+
+  .kpi-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+  .kpi-value { font-size: 36px; font-weight: 700; margin: 8px 0 6px; font-family: 'JetBrains Mono', monospace; }
+  .kpi-card:nth-child(1) .kpi-value { color: var(--accent-blue); }
+  .kpi-card:nth-child(2) .kpi-value { color: var(--accent-green); }
+  .kpi-card:nth-child(3) .kpi-value { color: var(--accent-red); }
+  .kpi-card:nth-child(4) .kpi-value { color: var(--accent-purple); }
+
+  .kpi-change {
+    font-size: 12px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .kpi-change.up { color: var(--accent-green); }
+  .kpi-change.down { color: var(--accent-red); }
+  .kpi-target { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Chart Grid */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .chart-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+  }
+  .chart-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chart-title .icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  /* Bottom Grid */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Table */
+  .table-container { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+    color: var(--text-secondary);
+  }
+  tr:hover td { background: rgba(59, 130, 246, 0.05); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-red { background: rgba(239,68,68,0.15); color: #f87171; }
+  .badge-green { background: rgba(16,185,129,0.15); color: #34d399; }
+  .badge-amber { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+  /* Progress bars */
+  .progress-row { margin-bottom: 14px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+  .progress-label span:first-child { color: var(--text-secondary); }
+  .progress-label span:last-child { color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+  .progress-track { height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 1.5s ease; }
+
+  canvas { max-height: 260px; }
+
+  @media (max-width: 1024px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .chart-grid { grid-template-columns: 1fr; }
+    .bottom-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="dashboard">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">📦</div>
+      <div>
+        <h1>Supply Chain KPI Dashboard</h1>
+        <div class="subtitle">DataCo Smart Supply Chain • 180K+ Transactions • 2015–2018</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="date-badge"><span class="live-dot"></span>Live Monitoring</div>
+      <div class="date-badge">Q4 2018</div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value">$36.4M</div>
+      <div class="kpi-change up">▲ 12.3% vs last year</div>
+      <div class="kpi-target">Target: $35M</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">On-Time Delivery Rate</div>
+      <div class="kpi-value">45.2%</div>
+      <div class="kpi-change down">▼ 3.1% vs target</div>
+      <div class="kpi-target">Target: ≥ 95% ⚠️ Critical</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Late Delivery Rate</div>
+      <div class="kpi-value">54.8%</div>
+      <div class="kpi-change down">▲ 2.4% vs last quarter</div>
+      <div class="kpi-target">Target: ≤ 5% ⚠️ Critical</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Order Fulfillment</div>
+      <div class="kpi-value">3.5d</div>
+      <div class="kpi-change up">▼ 0.2 days improved</div>
+      <div class="kpi-target">Target: ≤ 3 days</div>
+    </div>
+  </div>
+
+  <!-- Charts Row 1 -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">
+        <div class="icon" style="background:var(--glow-blue);">📈</div>
+        Monthly Revenue & Late Delivery Trend
+      </div>
+      <canvas id="revenueChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">
+        <div class="icon" style="background:var(--glow-red);">🚚</div>
+        Delivery Status Breakdown
+      </div>
+      <canvas id="deliveryPie"></canvas>
+    </div>
+  </div>
+
+  <!-- Bottom Grid -->
+  <div class="bottom-grid">
+    <!-- Late Rate by Region -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <div class="icon" style="background:var(--glow-red);">🌍</div>
+        Late Delivery by Region
+      </div>
+      <div class="progress-row"><div class="progress-label"><span>Central America</span><span>58.2%</span></div><div class="progress-track"><div class="progress-fill" style="width:58.2%;background:linear-gradient(90deg,#ef4444,#f87171)"></div></div></div>
+      <div class="progress-row"><div class="progress-label"><span>South America</span><span>56.7%</span></div><div class="progress-track"><div class="progress-fill" style="width:56.7%;background:linear-gradient(90deg,#ef4444,#f87171)"></div></div></div>
+      <div class="progress-row"><div class="progress-label"><span>Western Europe</span><span>55.1%</span></div><div class="progress-track"><div class="progress-fill" style="width:55.1%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div></div>
+      <div class="progress-row"><div class="progress-label"><span>Central Asia</span><span>54.3%</span></div><div class="progress-track"><div class="progress-fill" style="width:54.3%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div></div>
+      <div class="progress-row"><div class="progress-label"><span>Southeast Asia</span><span>53.8%</span></div><div class="progress-track"><div class="progress-fill" style="width:53.8%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div></div>
+      <div class="progress-row"><div class="progress-label"><span>Eastern Europe</span><span>52.1%</span></div><div class="progress-track"><div class="progress-fill" style="width:52.1%;background:linear-gradient(90deg,#10b981,#34d399)"></div></div></div>
+      <div class="progress-row"><div class="progress-label"><span>North America</span><span>49.8%</span></div><div class="progress-track"><div class="progress-fill" style="width:49.8%;background:linear-gradient(90deg,#10b981,#34d399)"></div></div></div>
+    </div>
+
+    <!-- Shipping Mode Performance -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <div class="icon" style="background:rgba(139,92,246,0.15);">📊</div>
+        Shipping Mode Performance
+      </div>
+      <canvas id="shippingBar"></canvas>
+    </div>
+
+    <!-- Top Markets Table -->
+    <div class="chart-card">
+      <div class="chart-title">
+        <div class="icon" style="background:rgba(6,182,212,0.15);">🏆</div>
+        Revenue by Category
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Category</th><th>Revenue</th><th>Margin</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Technology</td><td style="font-family:'JetBrains Mono';color:#e2e8f0">$8.21M</td><td>18.2%</td><td><span class="badge badge-amber">At Risk</span></td></tr>
+            <tr><td>Office Supplies</td><td style="font-family:'JetBrains Mono';color:#e2e8f0">$15.6M</td><td>22.4%</td><td><span class="badge badge-green">Healthy</span></td></tr>
+            <tr><td>Furniture</td><td style="font-family:'JetBrains Mono';color:#e2e8f0">$12.5M</td><td>14.7%</td><td><span class="badge badge-red">Low Margin</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:20px">
+        <div class="chart-title" style="margin-bottom:12px">
+          <div class="icon" style="background:rgba(245,158,11,0.15);">⚡</div>
+          Quick Stats
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
+          <div style="background:rgba(59,130,246,0.08);padding:12px;border-radius:10px;text-align:center">
+            <div style="color:var(--text-muted);margin-bottom:4px">Unique Customers</div>
+            <div style="font-size:20px;font-weight:700;color:var(--accent-blue);font-family:'JetBrains Mono'">20.6K</div>
+          </div>
+          <div style="background:rgba(139,92,246,0.08);padding:12px;border-radius:10px;text-align:center">
+            <div style="color:var(--text-muted);margin-bottom:4px">Markets</div>
+            <div style="font-size:20px;font-weight:700;color:var(--accent-purple);font-family:'JetBrains Mono'">5</div>
+          </div>
+          <div style="background:rgba(16,185,129,0.08);padding:12px;border-radius:10px;text-align:center">
+            <div style="color:var(--text-muted);margin-bottom:4px">Avg Profit Margin</div>
+            <div style="font-size:20px;font-weight:700;color:var(--accent-green);font-family:'JetBrains Mono'">21.3%</div>
+          </div>
+          <div style="background:rgba(245,158,11,0.08);padding:12px;border-radius:10px;text-align:center">
+            <div style="color:var(--text-muted);margin-bottom:4px">Countries</div>
+            <div style="font-size:20px;font-weight:700;color:var(--accent-amber);font-family:'JetBrains Mono'">164</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const gridColor = 'rgba(148, 163, 184, 0.08)';
+  const tickColor = '#64748b';
+
+  // Revenue Trend Chart
+  new Chart(document.getElementById('revenueChart'), {
+    type: 'line',
+    data: {
+      labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+      datasets: [
+        {
+          label: 'Revenue ($M)',
+          data: [2.1, 2.3, 2.5, 2.8, 3.0, 2.9, 3.2, 3.4, 3.5, 3.8, 4.1, 3.9],
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.1)',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#3b82f6'
+        },
+        {
+          label: 'Late Rate (%)',
+          data: [52, 51, 53, 54, 55, 53, 54, 56, 55, 57, 59, 56],
+          borderColor: '#ef4444',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 3,
+          pointBackgroundColor: '#ef4444',
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: tickColor, font: { family: 'DM Sans', size: 11 }, usePointStyle: true, pointStyle: 'circle' } }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
+        y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => '$' + v + 'M' } },
+        y1: { position: 'right', grid: { display: false }, ticks: { color: '#ef4444', callback: v => v + '%' }, min: 40, max: 65 }
+      }
+    }
+  });
+
+  // Delivery Pie
+  new Chart(document.getElementById('deliveryPie'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Late Delivery', 'On Time', 'Advance', 'Canceled'],
+      datasets: [{
+        data: [54.8, 40.5, 3.6, 1.1],
+        backgroundColor: ['#ef4444', '#10b981', '#3b82f6', '#64748b'],
+        borderColor: '#111827',
+        borderWidth: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: tickColor, font: { family: 'DM Sans', size: 11 }, padding: 16, usePointStyle: true, pointStyle: 'circle' } }
+      }
+    }
+  });
+
+  // Shipping Mode Bar
+  new Chart(document.getElementById('shippingBar'), {
+    type: 'bar',
+    data: {
+      labels: ['Standard', 'Second Class', 'First Class', 'Same Day'],
+      datasets: [
+        {
+          label: 'On-Time %',
+          data: [49.2, 44.8, 42.1, 40.3],
+          backgroundColor: 'rgba(16,185,129,0.7)',
+          borderRadius: 4
+        },
+        {
+          label: 'Late %',
+          data: [50.8, 55.2, 57.9, 59.7],
+          backgroundColor: 'rgba(239,68,68,0.7)',
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { labels: { color: tickColor, font: { family: 'DM Sans', size: 11 }, usePointStyle: true, pointStyle: 'circle' } }
+      },
+      scales: {
+        x: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, callback: v => v + '%' }, max: 100 },
+        y: { stacked: true, grid: { display: false }, ticks: { color: tickColor, font: { size: 11 } } }
+      }
+    }
+  });
+</script>
+</body>
+</html>
